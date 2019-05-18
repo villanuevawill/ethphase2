@@ -6,7 +6,6 @@ import os
 import binascii
 from config import system_config
 
-EPOCH_TIME = 15
 
 class Beacon():
     def __init__(self):
@@ -17,15 +16,15 @@ class Beacon():
         for i in range(0, self.shard_count):
             dispatcher.connect(self.handle_shard_write, signal=f"SHARD_TO_BEACON_{i}")
 
+        while True:
+            time.sleep(system_config["EPOCH_SLOT_TIME"])
+            current_slot = len(self.slots) % system_config["SHARD_COUNT"]
+            dispatcher.send(signal=f"BEACON_TO_SHARD_{current_slot}")
+
     def handle_shard_write(self, blocks, shard):
-        logging.info("writing!")
-
-
-
-# def beacon(shard_count):
-#     slots = []
-
-#     dispatcher.connect()
-        # for i in range(0, shard_count):
-        #     logging.info(f"publishing beacon request for shard {i}")
-        #     dispatcher.send(signal=f"BEACON_SHARD_{i}")
+        self.slots.append(blocks)
+        shard_count = system_config["SHARD_COUNT"]
+        if shard == shard_count - 1:
+            finalized_boundary = None if len(self.slots) - shard_count <= 0 else len(self.slots) - shard_count
+            logging.info(f"finalized epoch boundary at {finalized_boundary}")
+            dispatcher.send(signal="EPOCH_PUBLISHED", slots=self.slots, finalized_boundary=finalized_boundary)

@@ -7,12 +7,10 @@ import binascii
 import copy
 import threading
 from threading import Timer
+from config import system_config
 
 
-SLOT_TIME = 2.9
 ACCOUNT_DELTA = 5
-EPOCH_TIME = 15
-state = []
 
 def new_hash():
     return binascii.hexlify(os.urandom(4)).decode('utf-8')
@@ -57,7 +55,7 @@ class State():
     def greedy_genesis_state(self):
         genesis_account = Account(None, [], 10000000)
         self.state.append(genesis_account)
-        return state
+        return self.state
 
     def generate_random_transactions(self):
         transactions = []
@@ -93,6 +91,7 @@ class Shard():
         self.state.greedy_genesis_state()
         beacon_submit_stub = threading.Thread(target=self.submit_to_beacon)
         beacon_submit_stub.start()
+        dispatcher.connect(self.submit_to_beacon, signal=f"BEACON_TO_SHARD_{self.name}")
 
         while True:
             transactions = self.state.generate_random_transactions()
@@ -100,10 +99,9 @@ class Shard():
             self.blocks.append(block)
             dispatcher.send(signal=f"SHARD_{self.name}", message=block)
             logging.info(f"dispatched {block}")
-            time.sleep(SLOT_TIME)
+            time.sleep(system_config["SHARD_SLOT_TIME"])
 
     def submit_to_beacon(self):
-        while True:
-            time.sleep(EPOCH_TIME)
-            logging.info(f"dispatched to beacon")
-            dispatcher.send(signal=f"SHARD_TO_BEACON_{self.name}", blocks=self.blocks, shard=self.name)
+        logging.info(f"shard {self.name} dispatching to beacon chain")
+        block_roots = [block.root for block in self.blocks]
+        dispatcher.send(signal=f"SHARD_TO_BEACON_{self.name}", blocks=block_roots, shard=self.name)
