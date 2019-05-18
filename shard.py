@@ -70,17 +70,23 @@ class State():
                 transactions.append(transaction)
         return transactions
 
-def shard(name):
+
+def on_shard_update()
+
+
+def shard(name, shard_count):
     shard_state = State()
     shard_state.greedy_genesis_state()
+    dispatcher.connect( handle_specific_event, signal=, sender=dispatcher.Any )
 
     while True:
         transactions = shard_state.generate_random_transactions()
         block = {
             "root": new_hash(),
             "transactions": transactions,
-            "state": shard_state
+            "state": shard_state.state
         }
-        dispatcher.send(signal=f"SHARD_{name}", message=block["root"])
+        slots.append(block)
+        dispatcher.send(signal=f"SHARD_{name}", message=block)
         logging.info(f"dispatched {block}")
         time.sleep(SLOT_TIME)
