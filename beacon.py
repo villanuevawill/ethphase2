@@ -4,18 +4,18 @@ from pydispatch import dispatcher
 import random
 import os
 import binascii
+from config import system_config
 
 EPOCH_TIME = 15
 
 class Beacon():
-    def __init__(self, shard_count):
+    def __init__(self):
         self.slots = []
-        self.shard_count = shard_count
+        self.shard_count = system_config["SHARD_COUNT"]
 
     def run(self):
         for i in range(0, self.shard_count):
             dispatcher.connect(self.handle_shard_write, signal=f"SHARD_TO_BEACON_{i}")
-        time.sleep(1000000)
 
     def handle_shard_write(self, blocks, shard):
         logging.info("writing!")

@@ -13,6 +13,10 @@ SHARD_COUNT = None
 
 if __name__ == "__main__":
     shard_count = int(sys.argv[1])
+    shard_slot_time = int(sys.argv[2])
+
+    system_config["SHARD_COUNT"] = shard_count
+    system_config["SHARD_SLOT_TIME"] = shard_slot_time
 
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO,
@@ -36,7 +40,7 @@ if __name__ == "__main__":
         thread.start()
 
     logging.info("Main    : creating beacon chain")
-    beacon_chain = Beacon(shard_count)
+    beacon_chain = Beacon()
 
     logging.info("Main    : starting beacon chain")
     beacon_thread = threading.Thread(target=beacon_chain.run).start()
