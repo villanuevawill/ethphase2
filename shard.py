@@ -58,6 +58,7 @@ class State():
         return self.state
 
     def generate_random_transactions(self):
+        # need to decouple state transition function out of the state object... hacky for now
         transactions = []
         accounts_length = len(self.state)
         account_set = accounts_length + ACCOUNT_DELTA
@@ -88,17 +89,24 @@ class Shard():
         self.name = name
 
     def run(self):
+        # Initiate with genesis account
         self.state.greedy_genesis_state()
-        beacon_submit_stub = threading.Thread(target=self.submit_to_beacon)
-        beacon_submit_stub.start()
+
+        # Listens for a broadcast from the beacon chain that it is the shard's turn to write its crosslink
         dispatcher.connect(self.submit_to_beacon, signal=f"BEACON_TO_SHARD_{self.name}")
 
         while True:
             transactions = self.state.generate_random_transactions()
+
+            # deep copy state so history is kept (vs. mutating state array)
             block = Block(len(self.blocks) - 1, new_hash(), transactions, copy.deepcopy(self.state.state))
             self.blocks.append(block)
+
+            # notify visualizer and prediction market that a block has been submitted
             dispatcher.send(signal=f"SHARD_{self.name}", message=block)
             logging.info(f"dispatched {block}")
+
+            # wait slot period
             time.sleep(system_config["SHARD_SLOT_TIME"])
 
     def submit_to_beacon(self):
