@@ -71,13 +71,11 @@ class State():
         return transactions
 
 
-def on_shard_update()
-
-
 def shard(name, shard_count):
     shard_state = State()
     shard_state.greedy_genesis_state()
-    dispatcher.connect( handle_specific_event, signal=, sender=dispatcher.Any )
+    slots = []
+    # dispatcher.connect( prediction_update, signal="PREDICTED_ROOTS", sender=dispatcher.Any )
 
     while True:
         transactions = shard_state.generate_random_transactions()
@@ -90,3 +88,4 @@ def shard(name, shard_count):
         dispatcher.send(signal=f"SHARD_{name}", message=block)
         logging.info(f"dispatched {block}")
         time.sleep(SLOT_TIME)
+
