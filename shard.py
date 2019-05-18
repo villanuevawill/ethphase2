@@ -4,9 +4,14 @@ from pydispatch import dispatcher
 import random
 import os
 import binascii
+import copy
+import threading
+from threading import Timer
+
 
 SLOT_TIME = 2.9
 ACCOUNT_DELTA = 5
+EPOCH_TIME = 15
 state = []
 
 def new_hash():
@@ -34,6 +39,14 @@ class Transaction():
         self.balance = balance
     def __repr__(self):
         return "[sender: %r, receiver: %r, balance: %d]" % (self.sender, self.receiver, self.balance)
+
+
+class Block():
+    def __init__(self, slot, root, transactions, state):
+        self.slot = slot
+        self.root = root
+        self.transactions = transactions
+        self.state = state
 
 
 # Global state
@@ -70,22 +83,27 @@ class State():
                 transactions.append(transaction)
         return transactions
 
+class Shard():
+    def __init__(self, name):
+        self.blocks = []
+        self.state = State()
+        self.name = name
 
-def shard(name, shard_count):
-    shard_state = State()
-    shard_state.greedy_genesis_state()
-    slots = []
-    # dispatcher.connect( prediction_update, signal="PREDICTED_ROOTS", sender=dispatcher.Any )
+    def run(self):
+        self.state.greedy_genesis_state()
+        beacon_submit_stub = threading.Thread(target=self.submit_to_beacon)
+        beacon_submit_stub.start()
 
-    while True:
-        transactions = shard_state.generate_random_transactions()
-        block = {
-            "root": new_hash(),
-            "transactions": transactions,
-            "state": shard_state.state
-        }
-        slots.append(block)
-        dispatcher.send(signal=f"SHARD_{name}", message=block)
-        #logging.info(f"dispatched {block}")
-        time.sleep(SLOT_TIME)
+        while True:
+            transactions = self.state.generate_random_transactions()
+            block = Block(len(self.blocks) - 1, new_hash(), transactions, copy.deepcopy(self.state.state))
+            self.blocks.append(block)
+            dispatcher.send(signal=f"SHARD_{self.name}", message=block)
+            logging.info(f"dispatched {block}")
+            time.sleep(SLOT_TIME)
 
+    def submit_to_beacon(self):
+        while True:
+            time.sleep(EPOCH_TIME)
+            logging.info(f"dispatched to beacon")
+            dispatcher.send(signal=f"SHARD_TO_BEACON_{self.name}", blocks=self.blocks, shard=self.name)
