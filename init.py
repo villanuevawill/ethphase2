@@ -5,6 +5,7 @@ import sys
 from shard import Shard
 from pydispatch import dispatcher
 from beacon import Beacon
+from server import Server
 from config import system_config
 from prediction import Prediction
 from simulator import Simulator
@@ -44,6 +45,11 @@ if __name__ == "__main__":
     logging.info("Main    : starting beacon chain")
     beacon_thread = threading.Thread(target=beacon_chain.run).start()
 
+    logging.info("Main    : creating server")
+    server = Server()
+
+    logging.info("Main    : starting server")
+    server_thread = threading.Thread(target=server.run).start()
 
     logging.info("Main    : all initialized...")
     
