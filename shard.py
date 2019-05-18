@@ -86,6 +86,6 @@ def shard(name, shard_count):
         }
         slots.append(block)
         dispatcher.send(signal=f"SHARD_{name}", message=block)
-        logging.info(f"dispatched {block}")
+        #logging.info(f"dispatched {block}")
         time.sleep(SLOT_TIME)
 
