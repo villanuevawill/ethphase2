@@ -4,6 +4,6 @@ system_config = {
     "SHARD_SLOT_TIME": 3,
     "EPOCH_SLOT_TIME": 6,
     "ACCOUNT_DELTA": 2,
-    "ACCOUNT_MAX": 10
+    "ACCOUNT_MAX": 10,
     "PORT": 4567
 }
