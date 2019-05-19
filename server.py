@@ -1,8 +1,7 @@
 import asyncio
-import datetime
 import functools
+import json
 import logging
-import random
 import socket
 import websockets
 from config import system_config
@@ -12,73 +11,64 @@ from pydispatch import dispatcher
 class Server:
     def __init__(self):
         self.port = system_config["PORT"]
-        self.shard_count = system_config["SHARD_COUNT"]
+        # self.shard_count = system_config["SHARD_COUNT"]
 
     def run(self):
+        # We need an event loop just to handle incoming events
         asyncio.set_event_loop(asyncio.new_event_loop())
-        start_server = websockets.serve(self.hello, socket.gethostbyname(''), self.port)
+        start_server = websockets.serve(hello, socket.gethostbyname(''), self.port)
         asyncio.get_event_loop().run_until_complete(start_server)
         asyncio.get_event_loop().run_forever()
 
-    # @staticmethod
-    # This coroutine is run once for each socket connection.
-    async def hello(self, websocket, path):
-        logging.info(f"Websocket object connected on path {path} from {websocket.host}")
+# This coroutine is run once for each socket connection.
+async def hello(websocket, path):
+    logging.info(f"Websocket object connected on path {path} from {websocket.host}")
 
-        # These must stay in scope
-        handlers = []
+    # These must stay in scope
+    handlers = []
 
-        # Receive new shard blocks
-        for i in range(self.shard_count):
-            logging.info(f"Server    : Listening for events from shard {i}")
+    # Receive new shard blocks
+    loop = asyncio.new_event_loop()
+    # loop.run_forever()
+    # loop = asyncio.get_event_loop()
+    for i in range(system_config["SHARD_COUNT"]):
+        logging.info(f"Server    : Listening for events from shard {i}")
 
-            # Spawn a handler to manage this shard
-            handler = Handler(websocket, signal=f"SHARD_{i}")
-            handlers.append(handler)
-            # await handler.send()
-            # handlers.append(Handler(websocket, signal=f"SHARD_{i}"))
+        # Spawn a handler to manage this shard
+        handler = Handler(websocket, loop, signal=f"SHARD_{i}")
+        handlers.append(handler)
 
-        # Handshake
-        await websocket.send('Hello, world!')
+    # Handshake
+    await websocket.send('Hello, world!')
 
-        while True:
-            await websocket.ping()
-            await asyncio.sleep(2)
-            # now = datetime.datetime.utcnow().isoformat() + 'Z'
-            # await websocket.send(now)
-            # await asyncio.sleep(random.random() * 3)
-        # name = await websocket.recv()
-        # print(f"< {name}")
-        #
-        # greeting = f"Hello {name}!"
-        #
-        # await websocket.send(greeting)
-        # print(f"> {greeting}")
+    while True:
+        await websocket.ping()
+        await asyncio.sleep(2)
 
 
 class Handler:
-    def __init__(self, websocket, signal):
+    def __init__(self, websocket, loop, signal):
         logging.info(f"Handler created for signal {signal} on websocket {websocket}")
         self.websocket = websocket
         self.signal = signal
         dispatcher.connect(self.receive, signal=signal)
-        self.loop = asyncio.new_event_loop()
-
-    # async def send(self):
-    #     await self.websocket.send("handshake")
-
-    def receive(self):
-        logging.info("GOT BLOCK")
-        # loop = asyncio.get_event_loop()
-        # future = asyncio.Future()
-        # asyncio.run(asyncio.coroutine(self.send))
+        self.loop = loop
+        # self.loop = asyncio.new_event_loop()
+        # loop = asyncio.new_event_loop()
         # asyncio.set_event_loop(asyncio.new_event_loop())
-        # asyncio.ensure_future(self.websocket.send("handshake"))
+        asyncio.set_event_loop(loop)
+        # asyncio.get_event_loop().run_forever()
+        # self.loop.run_forever()
+        # loop.run_forever()
 
-        # self.websocket.send(f"Got block from shard {self.signal}")
+    def receive(self, message, shard):
+        logging.info(f"GOT BLOCK: {message.root} slot {message.slot} on shard {shard}")
+        # task = asyncio.create_task(self.__async_send(block=message, shard=shard))
+        return asyncio.create_task(self.__async_send(block=message, shard=shard))
+        # return self.loop.run_until_complete(self.__async_send(block=message, shard=shard))
+        # return self.loop.call_soon_threadsafe(self.__async_send(block=message, shard=shard))
+        # return asyncio.get_running_loop().call_soon(self.__async_send(block=message, shard=shard))
 
-        return self.loop.run_until_complete(self.__async_send())
-
-    async def __async_send(self):
-        await self.websocket.send("handshake")
+    async def __async_send(self, block, shard):
+        await self.websocket.send(f"got new block {block.root} slot {block.slot} on shard {shard}")
 
