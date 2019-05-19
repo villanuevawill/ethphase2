@@ -104,7 +104,7 @@ class Shard():
 
             # notify visualizer and prediction market that a block has been submitted
             dispatcher.send(signal=f"SHARD_{self.name}", message=block, shard=self.name)
-            logging.info(f"dispatched {block}")
+            logging.info(f"shard {self.name} dispatched block {block.root}")
 
             # wait slot period
             time.sleep(system_config["SHARD_SLOT_TIME"])
