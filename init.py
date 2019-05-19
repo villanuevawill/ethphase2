@@ -8,21 +8,22 @@ from beacon import Beacon
 import matplotlib.pyplot as plt
 from viz import VizController
 from config import system_config
+from prediction import Prediction
+from simulator import Simulator
 
-SHARD_COUNT = None
 
 if __name__ == "__main__":
-    shard_count = int(sys.argv[1]) if len(sys.argv) > 1 else system_config["SHARD_COUNT"]
-    shard_slot_time = int(sys.argv[2]) if len(sys.argv) > 2 else system_config["SHARD_SLOT_TIME"]
-    epoch_slot_time = int(sys.argv[3]) if len(sys.argv) > 3 else system_config["EPOCH_SLOT_TIME"]
-
-    system_config["SHARD_COUNT"] = shard_count
-    system_config["SHARD_SLOT_TIME"] = shard_slot_time
-    system_config["EPOCH_SLOT_TIME"] = epoch_slot_time
-
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO,
                         datefmt="%H:%M:%S")
+    shard_count = system_config["SHARD_COUNT"]
+
+    logging.info(f"Main    : creating prediction")
+    prediction = Prediction()
+    prediction_thread = threading.Thread(target=prediction.run).start()
+
+    simulator = Simulator()
+    simulator_thread = threading.Thread(target=simulator.run).start()
 
     threads = []
     shard_signals = []
